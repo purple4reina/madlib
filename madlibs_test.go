@@ -58,6 +58,18 @@ func TestMadlibEndpoint(t *testing.T) {
 			err:   nil,
 			code:  200,
 		},
+		{
+			name:  "empty responses",
+			words: &words{},
+			err:   nil,
+			code:  200,
+		},
+		{
+			name:  "error response",
+			words: &words{Noun: "cat", Verb: "run", Adjective: "hot"},
+			err:   fmt.Errorf("oops"),
+			code:  500,
+		},
 	}
 
 	for _, test := range testcases {
@@ -66,14 +78,31 @@ func TestMadlibEndpoint(t *testing.T) {
 			resp := httptest.NewRecorder()
 			r.ServeHTTP(resp, req)
 
-			expect := fmt.Sprintf(`{"madlib":"It was a %s day. I went `+
-				`downstairs to see if I could %s dinner. I asked, \"Does `+
-				`the stew need fresh %s?\""}`, test.words.Adjective,
-				test.words.Verb, test.words.Noun)
-			if resp.Body.String() != expect {
-				t.Errorf("incorrect response body\nactual=%s\nexpect=%s",
-					resp.Body, expect)
+			var expect string
+			if test.err == nil {
+				expect = fmt.Sprintf(`{"madlib":"It was a %s day. I went `+
+					`downstairs to see if I could %s dinner. I asked, \"Does `+
+					`the stew need fresh %s?\""}`, test.words.Adjective,
+					test.words.Verb, test.words.Noun)
+				if resp.Body.String() != expect {
+					t.Errorf("incorrect response body\nactual=%s\nexpect=%s",
+						resp.Body, expect)
+				}
+			} else {
+				// Since which of the three API calls responds first is
+				// nondeterministic, test for all three
+				expNoun := fmt.Sprintf(`{"error":"Get \"%snoun\": %s"}`,
+					wordURL, test.err.Error())
+				expVerb := fmt.Sprintf(`{"error":"Get \"%sverb\": %s"}`,
+					wordURL, test.err.Error())
+				expAdj := fmt.Sprintf(`{"error":"Get \"%sadjective\": %s"}`,
+					wordURL, test.err.Error())
+				if r := resp.Body.String(); r != expNoun && r != expVerb && r != expAdj {
+					t.Errorf("incorrect response body\nactual=%s\nexpect=%s",
+						resp.Body, expect)
+				}
 			}
+
 			if resp.Code != test.code {
 				t.Errorf("incorrect response code actual=%d expect=%d",
 					resp.Code, test.code)

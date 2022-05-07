@@ -47,7 +47,7 @@ func getWords() (*words, error) {
 	nounChan := make(chan string)
 	verbChan := make(chan string)
 	adjChan := make(chan string)
-	errChan := make(chan error)
+	errChan := make(chan error, 3)
 	defer close(errChan)
 
 	go getWord("noun", nounChan, errChan)
