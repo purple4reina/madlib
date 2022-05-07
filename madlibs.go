@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"html/template"
 	"io"
-	"log"
 	"net/http"
 	"strings"
 
@@ -105,19 +104,5 @@ func madlibEndpoint(c *gin.Context) {
 func main() {
 	r := gin.Default()
 	r.GET("/madlib", madlibEndpoint)
-	go r.Run() // listen and serve on 0.0.0.0:8080
-	getMadlib()
-}
-
-func getMadlib() {
-	resp, err := client.Get("http://localhost:8080/madlib")
-	if err != nil {
-		log.Fatal(err)
-	}
-	defer resp.Body.Close()
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		log.Fatal(err)
-	}
-	log.Print(string(body))
+	r.Run() // listen and serve on 0.0.0.0:8080
 }
