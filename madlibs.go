@@ -101,8 +101,13 @@ func madlibEndpoint(c *gin.Context) {
 	})
 }
 
-func main() {
+func newRouter() *gin.Engine {
 	r := gin.Default()
 	r.GET("/madlib", madlibEndpoint)
+	return r
+}
+
+func main() {
+	r := newRouter()
 	r.Run() // listen and serve on 0.0.0.0:8080
 }
