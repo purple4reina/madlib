@@ -50,11 +50,13 @@ func TestMadlibEndpoint(t *testing.T) {
 		name  string
 		words *words
 		err   error
+		code  int
 	}{
 		{
 			name:  "works fine",
 			words: &words{Noun: "cat", Verb: "run", Adjective: "hot"},
 			err:   nil,
+			code:  200,
 		},
 	}
 
@@ -69,7 +71,12 @@ func TestMadlibEndpoint(t *testing.T) {
 				`the stew need fresh %s?\""}`, test.words.Adjective,
 				test.words.Verb, test.words.Noun)
 			if resp.Body.String() != expect {
-				t.Errorf("incorrect response body\nactual=%s\nexpect=%s", resp.Body, expect)
+				t.Errorf("incorrect response body\nactual=%s\nexpect=%s",
+					resp.Body, expect)
+			}
+			if resp.Code != test.code {
+				t.Errorf("incorrect response code actual=%d expect=%d",
+					resp.Code, test.code)
 			}
 		})
 	}
