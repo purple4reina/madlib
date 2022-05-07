@@ -1,7 +1,8 @@
 package main
 
 import (
-	"fmt"
+	"bytes"
+	"html/template"
 	"io"
 	"log"
 	"net/http"
@@ -10,17 +11,20 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-var client = new(http.Client)
+var (
+	client     = new(http.Client)
+	madlibTemp = template.Must(template.New("madlib").Parse(sentence))
+)
 
 const (
 	wordURL  = "https://reminiscent-steady-albertosaurus.glitch.me/"
-	sentence = `It was a %s day. I went downstairs to see if I could %s dinner. I asked, "Does the stew need fresh %s?"`
+	sentence = `It was a {{.Adjective}} day. I went downstairs to see if I could {{.Verb}} dinner. I asked, "Does the stew need fresh {{.Noun}}?"`
 )
 
 type words struct {
-	noun      string
-	verb      string
-	adjective string
+	Noun      string
+	Verb      string
+	Adjective string
 }
 
 func getWord(wordType string, respChan chan<- string, errChan chan<- error) {
@@ -52,13 +56,13 @@ func getWords() (*words, error) {
 	go getWord("adjective", adjChan, errChan)
 
 	for n := range nounChan {
-		w.noun = n
+		w.Noun = n
 	}
 	for v := range verbChan {
-		w.verb = v
+		w.Verb = v
 	}
 	for a := range adjChan {
-		w.adjective = a
+		w.Adjective = a
 	}
 
 	select {
@@ -69,15 +73,32 @@ func getWords() (*words, error) {
 	}
 }
 
+func createMadlib(w *words) (string, error) {
+	madlib := &bytes.Buffer{}
+	err := madlibTemp.Execute(madlib, w)
+	if err != nil {
+		return "", err
+	}
+	return madlib.String(), nil
+}
+
 func madlibEndpoint(c *gin.Context) {
-	words, err := getWords()
+	w, err := getWords()
 	if err != nil {
 		c.JSON(500, gin.H{
 			"error": err.Error(),
 		})
+		return
+	}
+	madlib, err := createMadlib(w)
+	if err != nil {
+		c.JSON(500, gin.H{
+			"error": err.Error(),
+		})
+		return
 	}
 	c.JSON(200, gin.H{
-		"madlib": fmt.Sprintf(sentence, words.adjective, words.verb, words.noun),
+		"madlib": madlib,
 	})
 }
 
